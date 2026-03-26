@@ -37,14 +37,6 @@ function inlineDataUrls(messages: ModelMessage[]): ModelMessage[] {
 }
 
 // ── Semantic Memory (RAG) via Vectorize ─────────────────────────────────
-
-interface MemoryEntry {
-  id: string;
-  text: string;
-  timestamp: string;
-  metadata?: Record<string, string>;
-}
-
 async function generateEmbedding(ai: Ai, text: string): Promise<number[]> {
   const result = await ai.run("@cf/baai/bge-base-en-v1.5", {
     text: [text]
@@ -255,7 +247,7 @@ export class ChatAgent extends AIChatAgent<Env> {
             .map((m) => `- [${m.created_at}] (${m.sentiment}): ${m.summary}`)
             .join("\n");
       }
-    } catch (e) {}
+    } catch {}
 
     const messages = pruneMessages({
       messages: inlineDataUrls(await convertToModelMessages(this.messages)),
@@ -418,13 +410,24 @@ ${memoryContext}`,
               const resp = await fetch(
                 `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1`
               );
-              const data = (await resp.json()) as any;
-              const results: any[] = [];
-              if (data.Abstract) {
+              if (!resp.ok) throw new Error("Search API error");
+              const data = (await resp.json()) as {
+                Abstract?: string;
+                AbstractText?: string;
+                AbstractSource?: string;
+                AbstractURL?: string;
+                RelatedTopics?: Array<{ Text: string; FirstURL: string }>;
+              };
+              const results: Array<{
+                title: string;
+                url: string;
+                content: string;
+              }> = [];
+              if (data.Abstract || data.AbstractText) {
                 results.push({
-                  type: "abstract",
-                  text: data.Abstract,
-                  source: data.AbstractURL
+                  title: data.AbstractSource || "Abstract",
+                  url: data.AbstractURL || "",
+                  content: data.Abstract || data.AbstractText || ""
                 });
               }
               if (data.RelatedTopics) {
