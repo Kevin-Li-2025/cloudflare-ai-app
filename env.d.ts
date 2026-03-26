@@ -9,6 +9,7 @@ declare namespace Cloudflare {
 		AI: Ai;
 		ChatAgent: DurableObjectNamespace<import("./src/server").ChatAgent>;
 		VECTORIZE: VectorizeIndex;
+		ANTHROPIC_API_KEY?: string;
 	}
 }
 interface Env extends Cloudflare.Env {}

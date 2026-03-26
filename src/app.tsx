@@ -11,7 +11,7 @@ import {
   InputArea,
   Empty,
   Surface,
-  Text,
+  Text
 } from "@cloudflare/kumo";
 import { Toasty, useKumoToastManager } from "@cloudflare/kumo/components/toast";
 import { Streamdown } from "streamdown";
@@ -42,7 +42,6 @@ import {
   MicrophoneSlashIcon,
   RocketLaunchIcon,
   LightningIcon,
-  GlobeIcon,
   MagnifyingGlassIcon,
   PaletteIcon,
   TranslateIcon,
@@ -50,7 +49,7 @@ import {
   CodeIcon,
   ClockIcon,
   DatabaseIcon,
-  SparkleIcon,
+  SparkleIcon
 } from "@phosphor-icons/react";
 
 // ── Attachment helpers ────────────────────────────────────────────────
@@ -67,7 +66,7 @@ function createAttachment(file: File): Attachment {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     file,
     preview: URL.createObjectURL(file),
-    mediaType: file.type || "application/octet-stream",
+    mediaType: file.type || "application/octet-stream"
   };
 }
 
@@ -85,11 +84,12 @@ function fileToDataUri(file: File): Promise<string> {
 function useVoiceInput() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const startListening = useCallback(() => {
     const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       alert("Speech recognition is not supported in this browser.");
       return;
@@ -100,7 +100,7 @@ function useVoiceInput() {
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    recognition.onresult = (event: any) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       let finalTranscript = "";
       let interimTranscript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -161,16 +161,66 @@ function ThemeToggle() {
 // ── Capability Cards ──────────────────────────────────────────────────
 
 const CAPABILITIES = [
-  { icon: <BrainIcon size={20} />, label: "Llama 3.3 70B", desc: "Frontier LLM", color: "text-purple-400" },
-  { icon: <DatabaseIcon size={20} />, label: "RAG Memory", desc: "Vector search", color: "text-blue-400" },
-  { icon: <MagnifyingGlassIcon size={20} />, label: "Web Search", desc: "Real-time info", color: "text-green-400" },
-  { icon: <PaletteIcon size={20} />, label: "Image Gen", desc: "Flux AI art", color: "text-pink-400" },
-  { icon: <TranslateIcon size={20} />, label: "Translation", desc: "Multi-language", color: "text-yellow-400" },
-  { icon: <SmileyIcon size={20} />, label: "Sentiment", desc: "NLP analysis", color: "text-orange-400" },
-  { icon: <CodeIcon size={20} />, label: "Code Exec", desc: "Sandboxed JS", color: "text-cyan-400" },
-  { icon: <ClockIcon size={20} />, label: "Scheduling", desc: "Cron & timers", color: "text-indigo-400" },
-  { icon: <MicrophoneIcon size={20} />, label: "Voice Input", desc: "Speech-to-text", color: "text-red-400" },
-  { icon: <PlugsConnectedIcon size={20} />, label: "MCP Tools", desc: "External APIs", color: "text-teal-400" },
+  {
+    icon: <BrainIcon size={20} />,
+    label: "Llama 3.3 70B",
+    desc: "Frontier LLM",
+    color: "text-purple-400"
+  },
+  {
+    icon: <DatabaseIcon size={20} />,
+    label: "RAG Memory",
+    desc: "Vector search",
+    color: "text-blue-400"
+  },
+  {
+    icon: <MagnifyingGlassIcon size={20} />,
+    label: "Web Search",
+    desc: "Real-time info",
+    color: "text-green-400"
+  },
+  {
+    icon: <PaletteIcon size={20} />,
+    label: "Image Gen",
+    desc: "Flux AI art",
+    color: "text-pink-400"
+  },
+  {
+    icon: <TranslateIcon size={20} />,
+    label: "Translation",
+    desc: "Multi-language",
+    color: "text-yellow-400"
+  },
+  {
+    icon: <SmileyIcon size={20} />,
+    label: "Sentiment",
+    desc: "NLP analysis",
+    color: "text-orange-400"
+  },
+  {
+    icon: <CodeIcon size={20} />,
+    label: "Code Exec",
+    desc: "Sandboxed JS",
+    color: "text-cyan-400"
+  },
+  {
+    icon: <ClockIcon size={20} />,
+    label: "Scheduling",
+    desc: "Cron & timers",
+    color: "text-indigo-400"
+  },
+  {
+    icon: <MicrophoneIcon size={20} />,
+    label: "Voice Input",
+    desc: "Speech-to-text",
+    color: "text-red-400"
+  },
+  {
+    icon: <PlugsConnectedIcon size={20} />,
+    label: "MCP Tools",
+    desc: "External APIs",
+    color: "text-teal-400"
+  }
 ];
 
 function CapabilityGrid() {
@@ -182,8 +232,12 @@ function CapabilityGrid() {
           className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-kumo-control/50 border border-kumo-line/50 hover:border-kumo-line hover:bg-kumo-control transition-all duration-200 cursor-default"
         >
           <div className={cap.color}>{cap.icon}</div>
-          <Text size="xs" bold>{cap.label}</Text>
-          <Text size="xs" variant="secondary">{cap.desc}</Text>
+          <Text size="xs" bold>
+            {cap.label}
+          </Text>
+          <Text size="xs" variant="secondary">
+            {cap.desc}
+          </Text>
         </div>
       ))}
     </div>
@@ -194,10 +248,13 @@ function CapabilityGrid() {
 
 function ToolPartView({
   part,
-  addToolApprovalResponse,
+  addToolApprovalResponse
 }: {
   part: UIMessage["parts"][number];
-  addToolApprovalResponse: (response: { id: string; approved: boolean }) => void;
+  addToolApprovalResponse: (response: {
+    id: string;
+    approved: boolean;
+  }) => void;
 }) {
   if (!isToolUIPart(part)) return null;
   const toolName = getToolName(part);
@@ -215,7 +272,9 @@ function ToolPartView({
         <Surface className="max-w-[85%] px-4 py-3 rounded-xl ring ring-kumo-line">
           <div className="flex items-center gap-2 mb-2">
             <PaletteIcon size={14} className="text-pink-400" />
-            <Text size="xs" variant="secondary" bold>AI Generated Image</Text>
+            <Text size="xs" variant="secondary" bold>
+              AI Generated Image
+            </Text>
             <Badge variant="secondary">Done</Badge>
           </div>
           <img
@@ -238,7 +297,9 @@ function ToolPartView({
         <Surface className="max-w-[85%] px-4 py-2.5 rounded-xl ring ring-kumo-line">
           <div className="flex items-center gap-2 mb-1">
             <GearIcon size={14} className="text-kumo-inactive" />
-            <Text size="xs" variant="secondary" bold>{toolName}</Text>
+            <Text size="xs" variant="secondary" bold>
+              {toolName}
+            </Text>
             <Badge variant="secondary">Done</Badge>
           </div>
           <div className="font-mono">
@@ -259,7 +320,9 @@ function ToolPartView({
         <Surface className="max-w-[85%] px-4 py-3 rounded-xl ring-2 ring-kumo-warning">
           <div className="flex items-center gap-2 mb-2">
             <GearIcon size={14} className="text-kumo-warning" />
-            <Text size="sm" bold>Approval needed: {toolName}</Text>
+            <Text size="sm" bold>
+              Approval needed: {toolName}
+            </Text>
           </div>
           <div className="font-mono mb-3">
             <Text size="xs" variant="secondary">
@@ -298,14 +361,17 @@ function ToolPartView({
   // Rejected
   if (
     part.state === "output-denied" ||
-    ("approval" in part && (part.approval as { approved?: boolean })?.approved === false)
+    ("approval" in part &&
+      (part.approval as { approved?: boolean })?.approved === false)
   ) {
     return (
       <div className="flex justify-start">
         <Surface className="max-w-[85%] px-4 py-2.5 rounded-xl ring ring-kumo-line">
           <div className="flex items-center gap-2">
             <XCircleIcon size={14} className="text-kumo-danger" />
-            <Text size="xs" variant="secondary" bold>{toolName}</Text>
+            <Text size="xs" variant="secondary" bold>
+              {toolName}
+            </Text>
             <Badge variant="secondary">Rejected</Badge>
           </div>
         </Surface>
@@ -320,7 +386,9 @@ function ToolPartView({
         <Surface className="max-w-[85%] px-4 py-2.5 rounded-xl ring ring-kumo-line">
           <div className="flex items-center gap-2">
             <GearIcon size={14} className="text-kumo-inactive animate-spin" />
-            <Text size="xs" variant="secondary">Running {toolName}...</Text>
+            <Text size="xs" variant="secondary">
+              Running {toolName}...
+            </Text>
           </div>
         </Surface>
       </div>
@@ -346,7 +414,7 @@ function Chat() {
     prompts: [],
     resources: [],
     servers: {},
-    tools: [],
+    tools: []
   });
   const [showMcpPanel, setShowMcpPanel] = useState(false);
   const [mcpName, setMcpName] = useState("");
@@ -355,7 +423,8 @@ function Chat() {
   const mcpPanelRef = useRef<HTMLDivElement>(null);
 
   // Voice input
-  const { isListening, transcript, startListening, stopListening } = useVoiceInput();
+  const { isListening, transcript, startListening, stopListening } =
+    useVoiceInput();
 
   // Update input field with voice transcript
   useEffect(() => {
@@ -366,8 +435,14 @@ function Chat() {
     agent: "ChatAgent",
     onOpen: useCallback(() => setConnected(true), []),
     onClose: useCallback(() => setConnected(false), []),
-    onError: useCallback((error: Event) => console.error("WebSocket error:", error), []),
-    onMcpUpdate: useCallback((state: MCPServersState) => setMcpState(state), []),
+    onError: useCallback(
+      (error: Event) => console.error("WebSocket error:", error),
+      []
+    ),
+    onMcpUpdate: useCallback(
+      (state: MCPServersState) => setMcpState(state),
+      []
+    ),
     onMessage: useCallback(
       (message: MessageEvent) => {
         try {
@@ -376,7 +451,7 @@ function Chat() {
             toasts.add({
               title: "⏰ Scheduled task completed",
               description: data.description,
-              timeout: 0,
+              timeout: 0
             });
           }
         } catch {
@@ -384,14 +459,17 @@ function Chat() {
         }
       },
       [toasts]
-    ),
+    )
   });
 
   // Close MCP panel when clicking outside
   useEffect(() => {
     if (!showMcpPanel) return;
     function handleClickOutside(e: MouseEvent) {
-      if (mcpPanelRef.current && !mcpPanelRef.current.contains(e.target as Node)) {
+      if (
+        mcpPanelRef.current &&
+        !mcpPanelRef.current.contains(e.target as Node)
+      ) {
         setShowMcpPanel(false);
       }
     }
@@ -424,21 +502,30 @@ function Chat() {
   const serverEntries = Object.entries(mcpState.servers);
   const mcpToolCount = mcpState.tools.length;
 
-  const { messages, sendMessage, clearHistory, addToolApprovalResponse, stop, status } =
-    useAgentChat({
-      agent,
-      onToolCall: async (event) => {
-        if ("addToolOutput" in event && event.toolCall.toolName === "getUserTimezone") {
-          event.addToolOutput({
-            toolCallId: event.toolCall.toolCallId,
-            output: {
-              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-              localTime: new Date().toLocaleTimeString(),
-            },
-          });
-        }
-      },
-    });
+  const {
+    messages,
+    sendMessage,
+    clearHistory,
+    addToolApprovalResponse,
+    stop,
+    status
+  } = useAgentChat({
+    agent,
+    onToolCall: async (event) => {
+      if (
+        "addToolOutput" in event &&
+        event.toolCall.toolName === "getUserTimezone"
+      ) {
+        event.addToolOutput({
+          toolCallId: event.toolCall.toolCallId,
+          output: {
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            localTime: new Date().toLocaleTimeString()
+          }
+        });
+      }
+    }
+  });
 
   const isStreaming = status === "streaming" || status === "submitted";
 
@@ -604,10 +691,17 @@ function Chat() {
                   <Surface className="rounded-xl ring ring-kumo-line shadow-lg p-4 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <PlugsConnectedIcon size={16} className="text-kumo-accent" />
-                        <Text size="sm" bold>MCP Servers</Text>
+                        <PlugsConnectedIcon
+                          size={16}
+                          className="text-kumo-accent"
+                        />
+                        <Text size="sm" bold>
+                          MCP Servers
+                        </Text>
                         {serverEntries.length > 0 && (
-                          <Badge variant="secondary">{serverEntries.length}</Badge>
+                          <Badge variant="secondary">
+                            {serverEntries.length}
+                          </Badge>
                         )}
                       </div>
                       <Button
@@ -647,7 +741,9 @@ function Chat() {
                           variant="primary"
                           size="sm"
                           icon={<PlusIcon size={14} />}
-                          disabled={isAddingServer || !mcpName.trim() || !mcpUrl.trim()}
+                          disabled={
+                            isAddingServer || !mcpName.trim() || !mcpUrl.trim()
+                          }
                         >
                           {isAddingServer ? "..." : "Add"}
                         </Button>
@@ -688,18 +784,23 @@ function Chat() {
                               )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0 ml-2">
-                              {server.state === "authenticating" && server.auth_url && (
-                                <Button
-                                  variant="primary"
-                                  size="sm"
-                                  icon={<SignInIcon size={12} />}
-                                  onClick={() =>
-                                    window.open(server.auth_url as string, "oauth", "width=600,height=800")
-                                  }
-                                >
-                                  Auth
-                                </Button>
-                              )}
+                              {server.state === "authenticating" &&
+                                server.auth_url && (
+                                  <Button
+                                    variant="primary"
+                                    size="sm"
+                                    icon={<SignInIcon size={12} />}
+                                    onClick={() =>
+                                      window.open(
+                                        server.auth_url as string,
+                                        "oauth",
+                                        "width=600,height=800"
+                                      )
+                                    }
+                                  >
+                                    Auth
+                                  </Button>
+                                )}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -719,7 +820,8 @@ function Chat() {
                         <div className="flex items-center gap-2">
                           <WrenchIcon size={14} className="text-kumo-subtle" />
                           <span className="text-xs text-kumo-subtle">
-                            {mcpToolCount} tool{mcpToolCount !== 1 ? "s" : ""} available from MCP servers
+                            {mcpToolCount} tool{mcpToolCount !== 1 ? "s" : ""}{" "}
+                            available from MCP servers
                           </span>
                         </div>
                       </div>
@@ -728,7 +830,11 @@ function Chat() {
                 </div>
               )}
             </div>
-            <Button variant="secondary" icon={<TrashIcon size={16} />} onClick={clearHistory}>
+            <Button
+              variant="secondary"
+              icon={<TrashIcon size={16} />}
+              onClick={clearHistory}
+            >
               Clear
             </Button>
           </div>
@@ -748,7 +854,9 @@ function Chat() {
                   Frontier AI Agent
                 </h2>
                 <Text variant="secondary" className="max-w-md mx-auto">
-                  Powered by Llama 3.3 on Cloudflare Workers AI with RAG memory, web search, image generation, voice input, and 12+ frontier tools.
+                  Powered by Llama 3.3 on Cloudflare Workers AI with RAG memory,
+                  web search, image generation, voice input, and 12+ frontier
+                  tools.
                 </Text>
               </div>
 
@@ -767,7 +875,7 @@ function Chat() {
                       "📝 Summarize the history of quantum computing",
                       "😊 Analyze sentiment: I love building with Cloudflare!",
                       "⏰ Remind me in 10 minutes to check my code",
-                      "🧠 What are your capabilities?",
+                      "🧠 What are your capabilities?"
                     ].map((prompt) => (
                       <Button
                         key={prompt}
@@ -777,7 +885,7 @@ function Chat() {
                         onClick={() => {
                           sendMessage({
                             role: "user",
-                            parts: [{ type: "text", text: prompt }],
+                            parts: [{ type: "text", text: prompt }]
                           });
                         }}
                       >
@@ -792,7 +900,8 @@ function Chat() {
 
           {messages.map((message: UIMessage, index: number) => {
             const isUser = message.role === "user";
-            const isLastAssistant = message.role === "assistant" && index === messages.length - 1;
+            const isLastAssistant =
+              message.role === "assistant" && index === messages.length - 1;
 
             return (
               <div key={message.id} className="space-y-2">
@@ -815,7 +924,8 @@ function Chat() {
                 {message.parts
                   .filter(
                     (part) =>
-                      part.type === "reasoning" && (part as { text?: string }).text?.trim()
+                      part.type === "reasoning" &&
+                      (part as { text?: string }).text?.trim()
                   )
                   .map((part, i) => {
                     const reasoning = part as {
@@ -829,13 +939,22 @@ function Chat() {
                         <details className="max-w-[85%] w-full" open={!isDone}>
                           <summary className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-sm select-none">
                             <BrainIcon size={14} className="text-purple-400" />
-                            <span className="font-medium text-kumo-default">Reasoning</span>
+                            <span className="font-medium text-kumo-default">
+                              Reasoning
+                            </span>
                             {isDone ? (
-                              <span className="text-xs text-kumo-success">Complete</span>
+                              <span className="text-xs text-kumo-success">
+                                Complete
+                              </span>
                             ) : (
-                              <span className="text-xs text-kumo-brand">Thinking...</span>
+                              <span className="text-xs text-kumo-brand">
+                                Thinking...
+                              </span>
                             )}
-                            <CaretDownIcon size={14} className="ml-auto text-kumo-inactive" />
+                            <CaretDownIcon
+                              size={14}
+                              className="ml-auto text-kumo-inactive"
+                            />
                           </summary>
                           <pre className="mt-2 px-3 py-2 rounded-lg bg-kumo-control text-xs text-kumo-default whitespace-pre-wrap overflow-auto max-h-64">
                             {reasoning.text}
@@ -850,7 +969,9 @@ function Chat() {
                   .filter(
                     (part): part is Extract<typeof part, { type: "file" }> =>
                       part.type === "file" &&
-                      (part as { mediaType?: string }).mediaType?.startsWith("image/") === true
+                      (part as { mediaType?: string }).mediaType?.startsWith(
+                        "image/"
+                      ) === true
                   )
                   .map((part, i) => (
                     <div
@@ -976,7 +1097,9 @@ function Chat() {
               type="button"
               variant={isListening ? "primary" : "ghost"}
               shape="square"
-              aria-label={isListening ? "Stop voice input" : "Start voice input"}
+              aria-label={
+                isListening ? "Stop voice input" : "Start voice input"
+              }
               icon={
                 isListening ? (
                   <MicrophoneSlashIcon size={18} />
@@ -1031,7 +1154,9 @@ function Chat() {
                 variant="primary"
                 shape="square"
                 aria-label="Send message"
-                disabled={(!input.trim() && attachments.length === 0) || !connected}
+                disabled={
+                  (!input.trim() && attachments.length === 0) || !connected
+                }
                 icon={<PaperPlaneRightIcon size={18} />}
                 className="mb-0.5"
               />
@@ -1039,7 +1164,8 @@ function Chat() {
           </div>
           <div className="flex justify-center mt-2">
             <Text size="xs" variant="secondary">
-              Powered by Llama 3.3 · Cloudflare Workers AI · Durable Objects · Vectorize
+              Powered by Llama 3.3 · Cloudflare Workers AI · Durable Objects ·
+              Vectorize
             </Text>
           </div>
         </form>
@@ -1055,7 +1181,10 @@ export default function App() {
         fallback={
           <div className="flex items-center justify-center h-screen text-kumo-inactive">
             <div className="flex flex-col items-center gap-3">
-              <RocketLaunchIcon size={40} className="animate-bounce text-orange-400" />
+              <RocketLaunchIcon
+                size={40}
+                className="animate-bounce text-orange-400"
+              />
               <Text variant="secondary">Loading AI Agent...</Text>
             </div>
           </div>
