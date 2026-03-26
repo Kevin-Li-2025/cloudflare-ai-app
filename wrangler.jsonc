@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "cloudflare-ai-agent",
+  "name": "cf_ai_agent",
   "main": "src/server.ts",
   "compatibility_date": "2026-03-02",
   "compatibility_flags": ["nodejs_compat"],
