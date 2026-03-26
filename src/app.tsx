@@ -49,7 +49,10 @@ import {
   CodeIcon,
   ClockIcon,
   DatabaseIcon,
-  SparkleIcon
+  SparkleIcon,
+  ArrowsClockwiseIcon,
+  UsersThreeIcon,
+  TreeStructureIcon
 } from "@phosphor-icons/react";
 
 // ── Attachment helpers ────────────────────────────────────────────────
@@ -84,7 +87,7 @@ function fileToDataUri(file: File): Promise<string> {
 function useVoiceInput() {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<ReturnType<typeof Object.create> | null>(null);
 
   const startListening = useCallback(() => {
     const SpeechRecognition =
@@ -161,6 +164,29 @@ function ThemeToggle() {
 // ── Capability Cards ──────────────────────────────────────────────────
 
 const CAPABILITIES = [
+  // ── Frontier Features (highlighted first) ──
+  {
+    icon: <ArrowsClockwiseIcon size={20} />,
+    label: "Agentic RAG",
+    desc: "Multi-round retrieval",
+    color: "text-emerald-400",
+    frontier: true
+  },
+  {
+    icon: <UsersThreeIcon size={20} />,
+    label: "Multi-Agent",
+    desc: "Plan→Execute→Review",
+    color: "text-violet-400",
+    frontier: true
+  },
+  {
+    icon: <TreeStructureIcon size={20} />,
+    label: "Memory Tree",
+    desc: "Profile & goals",
+    color: "text-amber-400",
+    frontier: true
+  },
+  // ── Core Capabilities ──
   {
     icon: <BrainIcon size={20} />,
     label: "Llama 3.3 70B",
@@ -282,9 +308,16 @@ function ToolPartView({
             alt={(part.output as any).prompt}
             className="rounded-lg max-h-80 w-full object-contain border border-kumo-line"
           />
-          <Text size="xs" variant="secondary" className="mt-2 italic">
+          <span
+            style={{
+              marginTop: "0.5rem",
+              fontStyle: "italic",
+              fontSize: "0.75rem",
+              color: "var(--kumo-text-secondary)"
+            }}
+          >
             "{(part.output as any).prompt}"
-          </Text>
+          </span>
         </Surface>
       </div>
     );
@@ -853,11 +886,17 @@ function Chat() {
                 <h2 className="text-2xl font-bold text-kumo-default mb-2">
                   Frontier AI Agent
                 </h2>
-                <Text variant="secondary" className="max-w-md mx-auto">
-                  Powered by Llama 3.3 on Cloudflare Workers AI with RAG memory,
-                  web search, image generation, voice input, and 12+ frontier
-                  tools.
-                </Text>
+                <p
+                  style={{
+                    maxWidth: "28rem",
+                    margin: "0 auto",
+                    color: "var(--kumo-text-secondary)"
+                  }}
+                >
+                  Powered by Llama 3.3 on Cloudflare Workers AI with Agentic
+                  RAG, Multi-Agent Orchestration, Structured Memory, and 16+
+                  frontier tools.
+                </p>
               </div>
 
               <CapabilityGrid />
@@ -1051,9 +1090,9 @@ function Chat() {
           {isListening && (
             <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 animate-pulse">
               <MicrophoneIcon size={16} className="text-red-500" />
-              <Text size="xs" className="text-red-400">
+              <span style={{ fontSize: "0.75rem", color: "rgb(248 113 113)" }}>
                 Listening... speak now. Click the mic button again to stop.
-              </Text>
+              </span>
             </div>
           )}
 

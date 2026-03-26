@@ -38,19 +38,59 @@ A world-class AI-powered agent application built on Cloudflare's platform, showc
 | **User Input (Chat/Voice)** | Real-time WebSocket chat UI + **Web Speech API** voice input with live transcription                                 |
 | **Memory / State**          | SQLite-backed conversation memory + auto-summarization + Vectorize RAG knowledge base                                |
 
-## 🧠 Frontier Capabilities
+## 🧠 Frontier AI Architecture
+
+### ① Agentic RAG — Iterative Multi-Round Retrieval
+
+RAG goes from pipeline → **reasoning loop**. The agent autonomously decides how many search rounds to perform, refining its query each round until confidence exceeds the threshold.
+
+```
+Round 1: search("original query") → score 0.4 ✗
+  → LLM refines query based on partial results
+Round 2: search("refined query") → score 0.6 ✗
+  → LLM refines again
+Round 3: search("highly specific query") → score 0.85 ✓ → return
+```
+
+### ② Multi-Agent Orchestration — Planner → Worker → Reviewer
+
+Complex tasks are decomposed across **3 specialized LLM personas**:
+
+```
+User Request → [Planner Agent] → Step-by-step plan
+                    ↓
+              [Worker Agent] → Executes each step
+                    ↓
+             [Reviewer Agent] → Validates output
+                    ↓ (if rejected)
+              [Worker Agent] → Revises based on feedback
+```
+
+### ③ Structured Memory — Hierarchical User Profile
+
+Memory evolves from flat vectors to **structured knowledge**:
+
+```
+user_memory
+ ├── profile:    { name, role, expertise }
+ ├── preferences: { language, style, topics }
+ ├── goals:      [ career_goals, learning_goals ]
+ └── facts:      [ key_fact_1, key_fact_2 ]
+```
+
+Auto-extracted from conversations via LLM, persisted in SQLite, injected into system prompt.
 
 ### Core AI
 
-- **Llama 3.3 70B** — Meta's frontier open-weight model running on Cloudflare's serverless GPUs
+- **Llama 3.3 70B** — Meta's frontier open-weight model on Cloudflare's serverless GPUs
 - **Streaming responses** — Token-by-token streaming via WebSocket with resumable streams
-- **Multi-step reasoning** — Up to 8 tool-calling steps per turn for complex tasks
+- **Multi-step reasoning** — Up to 8 tool-calling steps per turn
 
 ### Semantic Memory (RAG)
 
 - **Vectorize integration** — Store and retrieve knowledge using `@cf/baai/bge-base-en-v1.5` embeddings
 - **Persistent knowledge base** — SQLite-backed storage with vector search fallback
-- **Auto-summarization** — Conversations are automatically summarized and stored for long-term memory
+- **Auto-summarization** — Conversations automatically summarized for long-term memory
 
 ### Tools & Capabilities
 
