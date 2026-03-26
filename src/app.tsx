@@ -11,7 +11,7 @@ import {
   InputArea,
   Empty,
   Surface,
-  Text
+  Text,
 } from "@cloudflare/kumo";
 import { Toasty, useKumoToastManager } from "@cloudflare/kumo/components/toast";
 import { Streamdown } from "streamdown";
@@ -37,7 +37,20 @@ import {
   XIcon,
   WrenchIcon,
   PaperclipIcon,
-  ImageIcon
+  ImageIcon,
+  MicrophoneIcon,
+  MicrophoneSlashIcon,
+  RocketLaunchIcon,
+  LightningIcon,
+  GlobeIcon,
+  MagnifyingGlassIcon,
+  PaletteIcon,
+  TranslateIcon,
+  SmileyIcon,
+  CodeIcon,
+  ClockIcon,
+  DatabaseIcon,
+  SparkleIcon,
 } from "@phosphor-icons/react";
 
 // ── Attachment helpers ────────────────────────────────────────────────
@@ -54,7 +67,7 @@ function createAttachment(file: File): Attachment {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     file,
     preview: URL.createObjectURL(file),
-    mediaType: file.type || "application/octet-stream"
+    mediaType: file.type || "application/octet-stream",
   };
 }
 
@@ -65,6 +78,57 @@ function fileToDataUri(file: File): Promise<string> {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+// ── Voice Input Hook ──────────────────────────────────────────────────
+
+function useVoiceInput() {
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const recognitionRef = useRef<any>(null);
+
+  const startListening = useCallback(() => {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+
+    recognition.onresult = (event: any) => {
+      let finalTranscript = "";
+      let interimTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const t = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += t;
+        } else {
+          interimTranscript += t;
+        }
+      }
+      setTranscript(finalTranscript || interimTranscript);
+    };
+
+    recognition.onerror = () => setIsListening(false);
+    recognition.onend = () => setIsListening(false);
+
+    recognition.start();
+    recognitionRef.current = recognition;
+    setIsListening(true);
+    setTranscript("");
+  }, []);
+
+  const stopListening = useCallback(() => {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+  }, []);
+
+  return { isListening, transcript, startListening, stopListening };
 }
 
 // ── Small components ──────────────────────────────────────────────────
@@ -94,20 +158,78 @@ function ThemeToggle() {
   );
 }
 
+// ── Capability Cards ──────────────────────────────────────────────────
+
+const CAPABILITIES = [
+  { icon: <BrainIcon size={20} />, label: "Llama 3.3 70B", desc: "Frontier LLM", color: "text-purple-400" },
+  { icon: <DatabaseIcon size={20} />, label: "RAG Memory", desc: "Vector search", color: "text-blue-400" },
+  { icon: <MagnifyingGlassIcon size={20} />, label: "Web Search", desc: "Real-time info", color: "text-green-400" },
+  { icon: <PaletteIcon size={20} />, label: "Image Gen", desc: "Flux AI art", color: "text-pink-400" },
+  { icon: <TranslateIcon size={20} />, label: "Translation", desc: "Multi-language", color: "text-yellow-400" },
+  { icon: <SmileyIcon size={20} />, label: "Sentiment", desc: "NLP analysis", color: "text-orange-400" },
+  { icon: <CodeIcon size={20} />, label: "Code Exec", desc: "Sandboxed JS", color: "text-cyan-400" },
+  { icon: <ClockIcon size={20} />, label: "Scheduling", desc: "Cron & timers", color: "text-indigo-400" },
+  { icon: <MicrophoneIcon size={20} />, label: "Voice Input", desc: "Speech-to-text", color: "text-red-400" },
+  { icon: <PlugsConnectedIcon size={20} />, label: "MCP Tools", desc: "External APIs", color: "text-teal-400" },
+];
+
+function CapabilityGrid() {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
+      {CAPABILITIES.map((cap) => (
+        <div
+          key={cap.label}
+          className="flex flex-col items-center gap-1.5 p-3 rounded-xl bg-kumo-control/50 border border-kumo-line/50 hover:border-kumo-line hover:bg-kumo-control transition-all duration-200 cursor-default"
+        >
+          <div className={cap.color}>{cap.icon}</div>
+          <Text size="xs" bold>{cap.label}</Text>
+          <Text size="xs" variant="secondary">{cap.desc}</Text>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Tool rendering ────────────────────────────────────────────────────
 
 function ToolPartView({
   part,
-  addToolApprovalResponse
+  addToolApprovalResponse,
 }: {
   part: UIMessage["parts"][number];
-  addToolApprovalResponse: (response: {
-    id: string;
-    approved: boolean;
-  }) => void;
+  addToolApprovalResponse: (response: { id: string; approved: boolean }) => void;
 }) {
   if (!isToolUIPart(part)) return null;
   const toolName = getToolName(part);
+
+  // Check if this is an image generation result
+  const isImageResult =
+    part.state === "output-available" &&
+    toolName === "generateImage" &&
+    (part.output as any)?.success &&
+    (part.output as any)?.image;
+
+  if (isImageResult) {
+    return (
+      <div className="flex justify-start">
+        <Surface className="max-w-[85%] px-4 py-3 rounded-xl ring ring-kumo-line">
+          <div className="flex items-center gap-2 mb-2">
+            <PaletteIcon size={14} className="text-pink-400" />
+            <Text size="xs" variant="secondary" bold>AI Generated Image</Text>
+            <Badge variant="secondary">Done</Badge>
+          </div>
+          <img
+            src={(part.output as any).image}
+            alt={(part.output as any).prompt}
+            className="rounded-lg max-h-80 w-full object-contain border border-kumo-line"
+          />
+          <Text size="xs" variant="secondary" className="mt-2 italic">
+            "{(part.output as any).prompt}"
+          </Text>
+        </Surface>
+      </div>
+    );
+  }
 
   // Completed
   if (part.state === "output-available") {
@@ -116,9 +238,7 @@ function ToolPartView({
         <Surface className="max-w-[85%] px-4 py-2.5 rounded-xl ring ring-kumo-line">
           <div className="flex items-center gap-2 mb-1">
             <GearIcon size={14} className="text-kumo-inactive" />
-            <Text size="xs" variant="secondary" bold>
-              {toolName}
-            </Text>
+            <Text size="xs" variant="secondary" bold>{toolName}</Text>
             <Badge variant="secondary">Done</Badge>
           </div>
           <div className="font-mono">
@@ -139,9 +259,7 @@ function ToolPartView({
         <Surface className="max-w-[85%] px-4 py-3 rounded-xl ring-2 ring-kumo-warning">
           <div className="flex items-center gap-2 mb-2">
             <GearIcon size={14} className="text-kumo-warning" />
-            <Text size="sm" bold>
-              Approval needed: {toolName}
-            </Text>
+            <Text size="sm" bold>Approval needed: {toolName}</Text>
           </div>
           <div className="font-mono mb-3">
             <Text size="xs" variant="secondary">
@@ -154,9 +272,8 @@ function ToolPartView({
               size="sm"
               icon={<CheckCircleIcon size={14} />}
               onClick={() => {
-                if (approvalId) {
+                if (approvalId)
                   addToolApprovalResponse({ id: approvalId, approved: true });
-                }
               }}
             >
               Approve
@@ -166,9 +283,8 @@ function ToolPartView({
               size="sm"
               icon={<XCircleIcon size={14} />}
               onClick={() => {
-                if (approvalId) {
+                if (approvalId)
                   addToolApprovalResponse({ id: approvalId, approved: false });
-                }
               }}
             >
               Reject
@@ -179,20 +295,17 @@ function ToolPartView({
     );
   }
 
-  // Rejected / denied
+  // Rejected
   if (
     part.state === "output-denied" ||
-    ("approval" in part &&
-      (part.approval as { approved?: boolean })?.approved === false)
+    ("approval" in part && (part.approval as { approved?: boolean })?.approved === false)
   ) {
     return (
       <div className="flex justify-start">
         <Surface className="max-w-[85%] px-4 py-2.5 rounded-xl ring ring-kumo-line">
           <div className="flex items-center gap-2">
             <XCircleIcon size={14} className="text-kumo-danger" />
-            <Text size="xs" variant="secondary" bold>
-              {toolName}
-            </Text>
+            <Text size="xs" variant="secondary" bold>{toolName}</Text>
             <Badge variant="secondary">Rejected</Badge>
           </div>
         </Surface>
@@ -207,9 +320,7 @@ function ToolPartView({
         <Surface className="max-w-[85%] px-4 py-2.5 rounded-xl ring ring-kumo-line">
           <div className="flex items-center gap-2">
             <GearIcon size={14} className="text-kumo-inactive animate-spin" />
-            <Text size="xs" variant="secondary">
-              Running {toolName}...
-            </Text>
+            <Text size="xs" variant="secondary">Running {toolName}...</Text>
           </div>
         </Surface>
       </div>
@@ -235,7 +346,7 @@ function Chat() {
     prompts: [],
     resources: [],
     servers: {},
-    tools: []
+    tools: [],
   });
   const [showMcpPanel, setShowMcpPanel] = useState(false);
   const [mcpName, setMcpName] = useState("");
@@ -243,26 +354,29 @@ function Chat() {
   const [isAddingServer, setIsAddingServer] = useState(false);
   const mcpPanelRef = useRef<HTMLDivElement>(null);
 
+  // Voice input
+  const { isListening, transcript, startListening, stopListening } = useVoiceInput();
+
+  // Update input field with voice transcript
+  useEffect(() => {
+    if (transcript) setInput((prev) => prev + transcript);
+  }, [transcript]);
+
   const agent = useAgent<ChatAgent>({
     agent: "ChatAgent",
     onOpen: useCallback(() => setConnected(true), []),
     onClose: useCallback(() => setConnected(false), []),
-    onError: useCallback(
-      (error: Event) => console.error("WebSocket error:", error),
-      []
-    ),
-    onMcpUpdate: useCallback((state: MCPServersState) => {
-      setMcpState(state);
-    }, []),
+    onError: useCallback((error: Event) => console.error("WebSocket error:", error), []),
+    onMcpUpdate: useCallback((state: MCPServersState) => setMcpState(state), []),
     onMessage: useCallback(
       (message: MessageEvent) => {
         try {
           const data = JSON.parse(String(message.data));
           if (data.type === "scheduled-task") {
             toasts.add({
-              title: "Scheduled task completed",
+              title: "⏰ Scheduled task completed",
               description: data.description,
-              timeout: 0
+              timeout: 0,
             });
           }
         } catch {
@@ -270,17 +384,14 @@ function Chat() {
         }
       },
       [toasts]
-    )
+    ),
   });
 
   // Close MCP panel when clicking outside
   useEffect(() => {
     if (!showMcpPanel) return;
     function handleClickOutside(e: MouseEvent) {
-      if (
-        mcpPanelRef.current &&
-        !mcpPanelRef.current.contains(e.target as Node)
-      ) {
+      if (mcpPanelRef.current && !mcpPanelRef.current.contains(e.target as Node)) {
         setShowMcpPanel(false);
       }
     }
@@ -313,30 +424,21 @@ function Chat() {
   const serverEntries = Object.entries(mcpState.servers);
   const mcpToolCount = mcpState.tools.length;
 
-  const {
-    messages,
-    sendMessage,
-    clearHistory,
-    addToolApprovalResponse,
-    stop,
-    status
-  } = useAgentChat({
-    agent,
-    onToolCall: async (event) => {
-      if (
-        "addToolOutput" in event &&
-        event.toolCall.toolName === "getUserTimezone"
-      ) {
-        event.addToolOutput({
-          toolCallId: event.toolCall.toolCallId,
-          output: {
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            localTime: new Date().toLocaleTimeString()
-          }
-        });
-      }
-    }
-  });
+  const { messages, sendMessage, clearHistory, addToolApprovalResponse, stop, status } =
+    useAgentChat({
+      agent,
+      onToolCall: async (event) => {
+        if ("addToolOutput" in event && event.toolCall.toolName === "getUserTimezone") {
+          event.addToolOutput({
+            toolCallId: event.toolCall.toolCallId,
+            output: {
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              localTime: new Date().toLocaleTimeString(),
+            },
+          });
+        }
+      },
+    });
 
   const isStreaming = status === "streaming" || status === "submitted";
 
@@ -344,11 +446,8 @@ function Chat() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Re-focus the input after streaming ends
   useEffect(() => {
-    if (!isStreaming && textareaRef.current) {
-      textareaRef.current.focus();
-    }
+    if (!isStreaming && textareaRef.current) textareaRef.current.focus();
   }, [isStreaming]);
 
   const addFiles = useCallback((files: FileList | File[]) => {
@@ -432,6 +531,7 @@ function Chat() {
   return (
     <div
       className="flex flex-col h-screen bg-kumo-elevated relative"
+      style={{ fontFamily: "'Inter', sans-serif" }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -449,12 +549,17 @@ function Chat() {
       <header className="px-5 py-4 bg-kumo-base border-b border-kumo-line">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold text-kumo-default">
-              <span className="mr-2">🚀</span>Cloudflare AI Agent Assignment
+            <h1 className="text-lg font-semibold text-kumo-default flex items-center gap-2">
+              <RocketLaunchIcon size={22} className="text-orange-400" />
+              <span>Cloudflare AI Agent</span>
             </h1>
             <Badge variant="secondary">
-              <ChatCircleDotsIcon size={12} weight="bold" className="mr-1" />
-              AI Chat
+              <LightningIcon size={12} weight="bold" className="mr-1" />
+              Llama 3.3
+            </Badge>
+            <Badge variant="secondary">
+              <SparkleIcon size={12} weight="bold" className="mr-1" />
+              Frontier
             </Badge>
           </div>
           <div className="flex items-center gap-3">
@@ -497,20 +602,12 @@ function Chat() {
               {showMcpPanel && (
                 <div className="absolute right-0 top-full mt-2 w-96 z-50">
                   <Surface className="rounded-xl ring ring-kumo-line shadow-lg p-4 space-y-4">
-                    {/* Panel Header */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <PlugsConnectedIcon
-                          size={16}
-                          className="text-kumo-accent"
-                        />
-                        <Text size="sm" bold>
-                          MCP Servers
-                        </Text>
+                        <PlugsConnectedIcon size={16} className="text-kumo-accent" />
+                        <Text size="sm" bold>MCP Servers</Text>
                         {serverEntries.length > 0 && (
-                          <Badge variant="secondary">
-                            {serverEntries.length}
-                          </Badge>
+                          <Badge variant="secondary">{serverEntries.length}</Badge>
                         )}
                       </div>
                       <Button
@@ -523,7 +620,6 @@ function Chat() {
                       />
                     </div>
 
-                    {/* Add Server Form */}
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
@@ -551,16 +647,13 @@ function Chat() {
                           variant="primary"
                           size="sm"
                           icon={<PlusIcon size={14} />}
-                          disabled={
-                            isAddingServer || !mcpName.trim() || !mcpUrl.trim()
-                          }
+                          disabled={isAddingServer || !mcpName.trim() || !mcpUrl.trim()}
                         >
                           {isAddingServer ? "..." : "Add"}
                         </Button>
                       </div>
                     </form>
 
-                    {/* Server List */}
                     {serverEntries.length > 0 && (
                       <div className="space-y-2 max-h-60 overflow-y-auto">
                         {serverEntries.map(([id, server]) => (
@@ -595,23 +688,18 @@ function Chat() {
                               )}
                             </div>
                             <div className="flex items-center gap-1 shrink-0 ml-2">
-                              {server.state === "authenticating" &&
-                                server.auth_url && (
-                                  <Button
-                                    variant="primary"
-                                    size="sm"
-                                    icon={<SignInIcon size={12} />}
-                                    onClick={() =>
-                                      window.open(
-                                        server.auth_url as string,
-                                        "oauth",
-                                        "width=600,height=800"
-                                      )
-                                    }
-                                  >
-                                    Auth
-                                  </Button>
-                                )}
+                              {server.state === "authenticating" && server.auth_url && (
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  icon={<SignInIcon size={12} />}
+                                  onClick={() =>
+                                    window.open(server.auth_url as string, "oauth", "width=600,height=800")
+                                  }
+                                >
+                                  Auth
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -626,15 +714,12 @@ function Chat() {
                       </div>
                     )}
 
-                    {/* Tool Summary */}
                     {mcpToolCount > 0 && (
                       <div className="pt-2 border-t border-kumo-line">
                         <div className="flex items-center gap-2">
                           <WrenchIcon size={14} className="text-kumo-subtle" />
                           <span className="text-xs text-kumo-subtle">
-                            {mcpToolCount} tool
-                            {mcpToolCount !== 1 ? "s" : ""} available from MCP
-                            servers
+                            {mcpToolCount} tool{mcpToolCount !== 1 ? "s" : ""} available from MCP servers
                           </span>
                         </div>
                       </div>
@@ -643,11 +728,7 @@ function Chat() {
                 </div>
               )}
             </div>
-            <Button
-              variant="secondary"
-              icon={<TrashIcon size={16} />}
-              onClick={clearHistory}
-            >
+            <Button variant="secondary" icon={<TrashIcon size={16} />} onClick={clearHistory}>
               Clear
             </Button>
           </div>
@@ -658,41 +739,60 @@ function Chat() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-5 py-6 space-y-5">
           {messages.length === 0 && (
-            <Empty
-              icon={<ChatCircleDotsIcon size={32} />}
-              title="Start a conversation"
-              contents={
-                <div className="flex flex-wrap justify-center gap-2">
-                  {[
-                    "What's the weather in Paris?",
-                    "What timezone am I in?",
-                    "Calculate 5000 * 3",
-                    "Remind me in 5 minutes to take a break"
-                  ].map((prompt) => (
-                    <Button
-                      key={prompt}
-                      variant="outline"
-                      size="sm"
-                      disabled={isStreaming}
-                      onClick={() => {
-                        sendMessage({
-                          role: "user",
-                          parts: [{ type: "text", text: prompt }]
-                        });
-                      }}
-                    >
-                      {prompt}
-                    </Button>
-                  ))}
+            <div className="pt-8">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-pink-500 mb-4 shadow-lg">
+                  <RocketLaunchIcon size={32} className="text-white" />
                 </div>
-              }
-            />
+                <h2 className="text-2xl font-bold text-kumo-default mb-2">
+                  Frontier AI Agent
+                </h2>
+                <Text variant="secondary" className="max-w-md mx-auto">
+                  Powered by Llama 3.3 on Cloudflare Workers AI with RAG memory, web search, image generation, voice input, and 12+ frontier tools.
+                </Text>
+              </div>
+
+              <CapabilityGrid />
+
+              <Empty
+                icon={<ChatCircleDotsIcon size={28} />}
+                title="Try one of these"
+                contents={
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {[
+                      "🌤️ What's the weather in Tokyo?",
+                      "🎨 Generate an image of a cyberpunk cityscape",
+                      "🌍 Translate 'Hello world' to Japanese",
+                      "🔍 Search the web for latest AI news",
+                      "📝 Summarize the history of quantum computing",
+                      "😊 Analyze sentiment: I love building with Cloudflare!",
+                      "⏰ Remind me in 10 minutes to check my code",
+                      "🧠 What are your capabilities?",
+                    ].map((prompt) => (
+                      <Button
+                        key={prompt}
+                        variant="outline"
+                        size="sm"
+                        disabled={isStreaming}
+                        onClick={() => {
+                          sendMessage({
+                            role: "user",
+                            parts: [{ type: "text", text: prompt }],
+                          });
+                        }}
+                      >
+                        {prompt}
+                      </Button>
+                    ))}
+                  </div>
+                }
+              />
+            </div>
           )}
 
           {messages.map((message: UIMessage, index: number) => {
             const isUser = message.role === "user";
-            const isLastAssistant =
-              message.role === "assistant" && index === messages.length - 1;
+            const isLastAssistant = message.role === "assistant" && index === messages.length - 1;
 
             return (
               <div key={message.id} className="space-y-2">
@@ -715,8 +815,7 @@ function Chat() {
                 {message.parts
                   .filter(
                     (part) =>
-                      part.type === "reasoning" &&
-                      (part as { text?: string }).text?.trim()
+                      part.type === "reasoning" && (part as { text?: string }).text?.trim()
                   )
                   .map((part, i) => {
                     const reasoning = part as {
@@ -730,22 +829,13 @@ function Chat() {
                         <details className="max-w-[85%] w-full" open={!isDone}>
                           <summary className="flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg bg-purple-500/10 border border-purple-500/20 text-sm select-none">
                             <BrainIcon size={14} className="text-purple-400" />
-                            <span className="font-medium text-kumo-default">
-                              Reasoning
-                            </span>
+                            <span className="font-medium text-kumo-default">Reasoning</span>
                             {isDone ? (
-                              <span className="text-xs text-kumo-success">
-                                Complete
-                              </span>
+                              <span className="text-xs text-kumo-success">Complete</span>
                             ) : (
-                              <span className="text-xs text-kumo-brand">
-                                Thinking...
-                              </span>
+                              <span className="text-xs text-kumo-brand">Thinking...</span>
                             )}
-                            <CaretDownIcon
-                              size={14}
-                              className="ml-auto text-kumo-inactive"
-                            />
+                            <CaretDownIcon size={14} className="ml-auto text-kumo-inactive" />
                           </summary>
                           <pre className="mt-2 px-3 py-2 rounded-lg bg-kumo-control text-xs text-kumo-default whitespace-pre-wrap overflow-auto max-h-64">
                             {reasoning.text}
@@ -760,9 +850,7 @@ function Chat() {
                   .filter(
                     (part): part is Extract<typeof part, { type: "file" }> =>
                       part.type === "file" &&
-                      (part as { mediaType?: string }).mediaType?.startsWith(
-                        "image/"
-                      ) === true
+                      (part as { mediaType?: string }).mediaType?.startsWith("image/") === true
                   )
                   .map((part, i) => (
                     <div
@@ -787,7 +875,7 @@ function Chat() {
                     if (isUser) {
                       return (
                         <div key={i} className="flex justify-end">
-                          <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md bg-kumo-contrast text-kumo-inverse leading-relaxed">
+                          <div className="max-w-[85%] px-4 py-2.5 rounded-2xl rounded-br-md bg-gradient-to-r from-orange-500 to-pink-500 text-white leading-relaxed shadow-md">
                             {text}
                           </div>
                         </div>
@@ -838,6 +926,16 @@ function Chat() {
             }}
           />
 
+          {/* Voice recording indicator */}
+          {isListening && (
+            <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30 animate-pulse">
+              <MicrophoneIcon size={16} className="text-red-500" />
+              <Text size="xs" className="text-red-400">
+                Listening... speak now. Click the mic button again to stop.
+              </Text>
+            </div>
+          )}
+
           {attachments.length > 0 && (
             <div className="flex gap-2 mb-2 flex-wrap">
               {attachments.map((att) => (
@@ -874,6 +972,22 @@ function Chat() {
               disabled={!connected || isStreaming}
               className="mb-0.5"
             />
+            <Button
+              type="button"
+              variant={isListening ? "primary" : "ghost"}
+              shape="square"
+              aria-label={isListening ? "Stop voice input" : "Start voice input"}
+              icon={
+                isListening ? (
+                  <MicrophoneSlashIcon size={18} />
+                ) : (
+                  <MicrophoneIcon size={18} />
+                )
+              }
+              onClick={isListening ? stopListening : startListening}
+              disabled={!connected || isStreaming}
+              className="mb-0.5"
+            />
             <InputArea
               ref={textareaRef}
               value={input}
@@ -891,9 +1005,11 @@ function Chat() {
               }}
               onPaste={handlePaste}
               placeholder={
-                attachments.length > 0
-                  ? "Add a message or send images..."
-                  : "Send a message..."
+                isListening
+                  ? "🎤 Listening..."
+                  : attachments.length > 0
+                    ? "Add a message or send images..."
+                    : "Ask me anything — I can search, generate images, translate, analyze..."
               }
               disabled={!connected || isStreaming}
               rows={1}
@@ -915,13 +1031,16 @@ function Chat() {
                 variant="primary"
                 shape="square"
                 aria-label="Send message"
-                disabled={
-                  (!input.trim() && attachments.length === 0) || !connected
-                }
+                disabled={(!input.trim() && attachments.length === 0) || !connected}
                 icon={<PaperPlaneRightIcon size={18} />}
                 className="mb-0.5"
               />
             )}
+          </div>
+          <div className="flex justify-center mt-2">
+            <Text size="xs" variant="secondary">
+              Powered by Llama 3.3 · Cloudflare Workers AI · Durable Objects · Vectorize
+            </Text>
           </div>
         </form>
       </div>
@@ -935,7 +1054,10 @@ export default function App() {
       <Suspense
         fallback={
           <div className="flex items-center justify-center h-screen text-kumo-inactive">
-            Loading...
+            <div className="flex flex-col items-center gap-3">
+              <RocketLaunchIcon size={40} className="animate-bounce text-orange-400" />
+              <Text variant="secondary">Loading AI Agent...</Text>
+            </div>
           </div>
         }
       >

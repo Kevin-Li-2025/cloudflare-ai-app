@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "agent-starter",
+  "name": "cloudflare-ai-agent",
   "main": "src/server.ts",
   "compatibility_date": "2026-03-02",
   "compatibility_flags": ["nodejs_compat"],
@@ -22,6 +22,15 @@
     {
       "new_sqlite_classes": ["ChatAgent"],
       "tag": "v1"
+    }
+  ],
+
+  // Vectorize index for RAG / semantic search
+  // Run: npx wrangler vectorize create ai-knowledge --dimensions=768 --metric=cosine
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "ai-knowledge"
     }
   ]
 }
